@@ -1,0 +1,4 @@
+! WB97X-D3 def2-SVP def2/J TightSCF RIJK
+%maxcore 1000
+%pal nprocs 16 end
+*xyzfile 2 2 sult_099_triple_LD_histidine2_lysine.xyz

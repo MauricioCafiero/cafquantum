@@ -1,0 +1,4 @@
+! WB97X-D3 def2-SVP def2/J TightSCF RIJK
+%maxcore 1000
+%pal nprocs 16 end
+*xyzfile 0 2 ddc_021_pair_LD_lysine.xyz

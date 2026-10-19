@@ -1,0 +1,4 @@
+! WB97X-D3 def2-SVP def2/J TightSCF RIJK
+%maxcore 1000
+%pal nprocs 16 end
+*xyzfile 1 3 sult_027_pair_alanine_histidine2.xyz

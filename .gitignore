@@ -16,3 +16,6 @@ pm7/
 
 # model weights (large binaries, fetched separately)
 weights/
+# MBE decomposition workspace (2/3-body binding energies)
+mbe/
+.claude/

@@ -40,6 +40,25 @@ def egret_supported(atoms) -> tuple[bool, str]:
     return (not unsupported, f"Egret-1 does not cover: {', '.join(unsupported)}")
 
 
+class _PinnedNBList:
+    """Guard around AIMNet2's AdaptiveNeighborList: resets the neighbour-buffer
+    size before every call so the hysteresis shrink cannot leave one frame with
+    a buffer too small for the next frame's neighbour count (which truncates
+    silently and corrupts energies)."""
+
+
+    def __init__(self, inner, n: int) -> None:
+        self._inner = inner
+        self._n = n
+
+    def __getattr__(self, name):
+        return getattr(self._inner, name)
+
+    def __call__(self, *args, **kwargs):
+        self._inner.max_neighbors = self._n
+        return self._inner(*args, **kwargs)
+
+
 class _EgretForwardAdapter:
     """Adapter for compiled Egret-1 models (written against mace-torch 0.3.12)
     under the installed mace-torch 0.3.16 calculator, whose forward call passes
@@ -85,7 +104,7 @@ def element_guard(method: str, atoms) -> tuple[bool, str]:
 
 def make_calculator(method: str, *, charge: int = 0, multiplicity: int = 1,
                     label: str = "mol", workdir: str | Path = ".",
-                    device: str = "cpu"):
+                    device: str = "cpu", mixer_damping: float = 0.4):
     """Build the ASE calculator for ``method`` and return it."""
     if method == "uma":
         import cafquant.env
@@ -116,13 +135,21 @@ def make_calculator(method: str, *, charge: int = 0, multiplicity: int = 1,
     if method == "aimnet2":
         from aimnet.calculators import AIMNet2ASE, AIMNet2Calculator
         base = AIMNet2Calculator("aimnet2-2025", device=device)
-        return AIMNet2ASE(base, charge=charge, mult=multiplicity, validate_species=True)
+        calc = AIMNet2ASE(base, charge=charge, mult=multiplicity, validate_species=True)
+        # AIMNet2ASE's adaptive neighbour list shrinks its buffer after small
+        # frames (hysteresis) and then silently truncates the neighbour list on
+        # denser frames -- energies shift by tens of eV depending on which
+        # frames ran before. Verified converged at 64/128/256 on the sult
+        # frames (and matching the other backends), so pin a fixed buffer.
+        base._nblist = _PinnedNBList(base._nblist, 128)
+        return calc
 
     if method == "gfn2":
         from tblite.ase import TBLite
         return TBLite(method="GFN2-xTB", charge=float(charge),
                       multiplicity=multiplicity if multiplicity > 1 else None,
-                      accuracy=1.0, verbosity=0)
+                      accuracy=1.0, max_iterations=500,
+                      mixer_damping=mixer_damping, verbosity=0)
 
     if method == "pm7":
         from ase.calculators.mopac import MOPAC
