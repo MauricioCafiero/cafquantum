@@ -20,7 +20,7 @@ log = logging.getLogger("cafquant")
 # Methods needing torch: run in their own worker process. tblite (gfn2) links
 # libgomp, torch ships libomp -- the two OpenMP runtimes cannot be initialized
 # in one process on macOS, even with KMP_DUPLICATE_LIB_OK=TRUE.
-TORCH_METHODS = ("uma", "maceoff", "aimnet2")
+TORCH_METHODS = ("uma", "maceoff", "egret", "aimnet2")
 
 KCAL = units.kcal / units.mol
 HA = units.Ha

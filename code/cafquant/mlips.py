@@ -1,8 +1,9 @@
-"""Calculator factory: all five backends as ASE calculators.
+"""Calculator factory: all six backends as ASE calculators.
 
 A fresh calculator is built per (method, task) so no state leaks between jobs;
 the Atoms object carries over. Charge/spin conventions:
   - uma (omol): atoms.info["charge"], atoms.info["spin"] = multiplicity
+  - maceoff/egret: MACECalculator(charges_key="charge") reads atoms.info["charge"]
   - aimnet2:    passed at construction (charge, mult)
   - gfn2:       passed to TBLite (charge, multiplicity)
   - pm7:        MOPAC charge kwarg; multiplicity>1 via initial magmoms (set in inputs)
@@ -16,6 +17,16 @@ from pathlib import Path
 # producing a garbage energy.
 MACEOFF_ELEMENTS = {"H", "B", "C", "N", "O", "F", "Si", "P", "S", "Cl", "Br", "I"}
 
+# Egret-1 element coverage, read from the compiled model's own atomic_numbers
+# (H, C, N, O, F, P, S, Cl, Br, I).
+EGRET_ELEMENTS = {"H", "C", "N", "O", "F", "P", "S", "Cl", "Br", "I"}
+
+# Default location of the Egret-1 compiled MACE models (override with the
+# CAFQUANT_EGRET_MODEL env var to point at EGRET_1E / EGRET_1T etc.).
+EGRET_DEFAULT_MODEL = ("/Users/cafierom/OneDrive - University of Reading/"
+                       "Research-Reading/Python/python_bootcamp/Egret_models/"
+                       "compiled_models/EGRET_1.model")
+
 # GFN2-xTB (tblite) parameter coverage runs to Z=86.
 GFN2_MAX_Z = 86
 
@@ -23,6 +34,33 @@ GFN2_MAX_Z = 86
 def maceoff_supported(atoms) -> tuple[bool, str]:
     unsupported = sorted(set(atoms.get_chemical_symbols()) - MACEOFF_ELEMENTS)
     return (not unsupported, f"MACE-OFF23 does not cover: {', '.join(unsupported)}")
+
+
+def egret_supported(atoms) -> tuple[bool, str]:
+    unsupported = sorted(set(atoms.get_chemical_symbols()) - EGRET_ELEMENTS)
+    return (not unsupported, f"Egret-1 does not cover: {', '.join(unsupported)}")
+
+
+class _EgretForwardAdapter:
+    """Adapter for compiled Egret-1 models (written against mace-torch 0.3.12)
+    under the installed mace-torch 0.3.16 calculator, whose forward call passes
+    compute_edge_forces/compute_atomic_stresses kwargs the older TorchScript
+    schema does not accept. Keeps the shared mace install untouched; only the
+    per-call kwargs entering the Egret module are filtered."""
+
+    def __init__(self, module):
+        self._module = module  # already dtype-cast by MACECalculator
+
+    def __getattr__(self, name):  # r_max, atomic_numbers, heads, ...
+        return getattr(self._module, name)
+
+    def forward(self, data, training=False, **kwargs):
+        return self._module(data, training=training)
+
+    __call__ = forward
+
+    def extra_repr(self):
+        return "EgretForwardAdapter"
 
 
 def element_guard(method: str, atoms) -> tuple[bool, str]:
@@ -34,6 +72,8 @@ def element_guard(method: str, atoms) -> tuple[bool, str]:
     """
     if method == "maceoff":
         return maceoff_supported(atoms)
+    if method == "egret":
+        return egret_supported(atoms)
     if method == "gfn2":
         from ase.data import atomic_numbers, chemical_symbols
         bad = sorted({s for s in set(atoms.get_chemical_symbols())
@@ -61,6 +101,18 @@ def make_calculator(method: str, *, charge: int = 0, multiplicity: int = 1,
         cafquant.env.patch_torch_for_e3nn()
         from mace.calculators.foundations_models import mace_off
         return mace_off(model="small", device=device, default_dtype="float64")
+
+    if method == "egret":
+        import os
+        import cafquant.env
+        cafquant.env.patch_torch_for_e3nn()
+        from mace.calculators import MACECalculator
+
+        model_path = os.environ.get("CAFQUANT_EGRET_MODEL", EGRET_DEFAULT_MODEL)
+        calc = MACECalculator(model_paths=[model_path], device=device,
+                              default_dtype="float64", charges_key="charge")
+        calc.models = [_EgretForwardAdapter(m) for m in calc.models]
+        return calc
 
     if method == "aimnet2":
         from aimnet.calculators import AIMNet2ASE, AIMNet2Calculator

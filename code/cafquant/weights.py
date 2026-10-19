@@ -1,4 +1,4 @@
-"""Weight/model availability for the five backends + optional downloads.
+"""Weight/model availability for the six backends + optional downloads.
 
 Nothing here downloads unless you call :func:`download`; the normal path is a
 cheap existence check so a run can skip backends whose weights are missing.
@@ -10,6 +10,8 @@ from __future__ import annotations
 import os
 import shutil
 from pathlib import Path
+
+from .mlips import EGRET_DEFAULT_MODEL
 
 MACE_CACHE = Path(__import__("os").environ.get("XDG_CACHE_HOME", str(Path.home() / ".cache"))) / "mace"
 AIMNET_CACHE = Path(os.environ.get("AIMNET_CACHE_DIR", str(Path.home() / ".cache" / "aimnet")))
@@ -33,6 +35,12 @@ def check_weights() -> dict[str, dict]:
     mace_file = MACE_CACHE / "MACE-OFF23_small.model"
     out["maceoff"] = {"ok": mace_file.is_file(),
                       "detail": str(mace_file) if mace_file.is_file() else f"missing: {mace_file}"}
+
+    # egret: compiled TorchScript model at a known local path (no download!)
+    egret_model = Path(os.environ.get("CAFQUANT_EGRET_MODEL", EGRET_DEFAULT_MODEL))
+    out["egret"] = {"ok": egret_model.is_file(),
+                    "detail": str(egret_model) if egret_model.is_file()
+                    else f"missing: {egret_model} (set CAFQUANT_EGRET_MODEL to override)"}
 
     # aimnet2
     aim_file = AIMNET_CACHE / "aimnet2_2025_b973c_d3_0.pt"
@@ -88,6 +96,10 @@ def download(method: str) -> str:
                "mace_off23/MACE-OFF23_small.model")
         urllib.request.urlretrieve(url, dst)
         return f"maceoff weights at {dst}"
+    if method == "egret":
+        return ("egret models are distributed separately (no public download); point "
+                "CAFQUANT_EGRET_MODEL at the compiled .model file, e.g. EGRET_1.model, "
+                "EGRET_1E.model or EGRET_1T.model from the Egret_models/compiled_models dir")
     if method == "aimnet2":
         from aimnet.calculators.model_registry import get_model_path
         p = get_model_path("aimnet2-2025")  # sha-256-validated download if absent
