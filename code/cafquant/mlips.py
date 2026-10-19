@@ -16,10 +16,32 @@ from pathlib import Path
 # producing a garbage energy.
 MACEOFF_ELEMENTS = {"H", "B", "C", "N", "O", "F", "Si", "P", "S", "Cl", "Br", "I"}
 
+# GFN2-xTB (tblite) parameter coverage runs to Z=86.
+GFN2_MAX_Z = 86
+
 
 def maceoff_supported(atoms) -> tuple[bool, str]:
     unsupported = sorted(set(atoms.get_chemical_symbols()) - MACEOFF_ELEMENTS)
     return (not unsupported, f"MACE-OFF23 does not cover: {', '.join(unsupported)}")
+
+
+def element_guard(method: str, atoms) -> tuple[bool, str]:
+    """(ok, reason) for methods with restricted element coverage.
+
+    aimnet2 raises its own descriptive error from model metadata
+    (implemented_species / charged-system checks); uma covers the full table;
+    pm7 covers essentially everything H-Pu.
+    """
+    if method == "maceoff":
+        return maceoff_supported(atoms)
+    if method == "gfn2":
+        from ase.data import atomic_numbers, chemical_symbols
+        bad = sorted({s for s in set(atoms.get_chemical_symbols())
+                      if atomic_numbers[s] > GFN2_MAX_Z})
+        return (not bad,
+                f"GFN2-xTB covers elements up to Z=86 (Rn); does not cover: {', '.join(bad)}"
+                " (consider uma for heavy elements)" if bad else "")
+    return True, ""
 
 
 def make_calculator(method: str, *, charge: int = 0, multiplicity: int = 1,

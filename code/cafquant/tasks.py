@@ -127,7 +127,7 @@ def run_method(method: str, atoms: Atoms, tasks: list[str], rundir: Path,
     'opt' implies an sp first (the pre-optimization energy); 'freq' implies opt.
     Returns the summary row for this method.
     """
-    from .mlips import make_calculator, maceoff_supported
+    from .mlips import element_guard, make_calculator
 
     row: dict = {"method": method, "status": "ok"}
     want_sp, want_opt, want_freq = ("sp" in tasks, "opt" in tasks, "freq" in tasks)
@@ -135,11 +135,11 @@ def run_method(method: str, atoms: Atoms, tasks: list[str], rundir: Path,
         want_opt = True
 
     try:
-        if method == "maceoff":
-            ok, why = maceoff_supported(atoms)
-            if not ok:
-                row.update({"status": "skipped", "error": why})
-                return row
+        ok, why = element_guard(method, atoms)
+        if not ok:
+            log.warning("%s skipped: %s", method, why)
+            row.update({"status": "skipped", "error": why})
+            return row
 
         def _calc():
             return make_calculator(method, charge=charge, multiplicity=multiplicity,
