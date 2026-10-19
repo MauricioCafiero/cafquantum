@@ -1,5 +1,5 @@
 #!/bin/zsh
-# cafquant environment setup: uv venv with all five backends + rdkit + ase
+# cafquant environment setup: uv venv with all six backends + rdkit + ase + pytest
 # torch 2.8.0 is the compatibility intersection:
 #   fairchem-core 2.21 requires torch~=2.8.0, aimnet 0.2.0 requires >=2.8, mace-torch allows >=1.12
 #
@@ -36,7 +36,8 @@ export MKL_NUM_THREADS=1
     "ase-db-backends>=0.10.0" "clusterscope==0.0.18" "huggingface-hub>=0.27.1" \
     "hydra-core" "monty>=2026.2.18" "numba>=0.62.0" \
     "ray[serve]>=2.53.0" "requests" "scipy>=1.15.0" "setuptools<81.0.0" \
-    "submitit" "torchtnt" "websockets" "wandb"
+    "submitit" "torchtnt" "websockets" "wandb" \
+    "pytest"
 
 /opt/homebrew/bin/uv pip install --python .venv/bin/python --no-deps \
     "fairchem-core==2.21.0" "mace-torch==0.3.16"
@@ -46,5 +47,5 @@ cd code
 ../.venv/bin/python -c "
 import cafquant.env
 import torch, fairchem.core, mace.calculators, aimnet.calculators, tblite.ase, ase, rdkit
-print('torch', torch.__version__, '| ase', ase.__version__, '| all five backends import OK')
+print('torch', torch.__version__, '| ase', ase.__version__, '| all six backends import OK')
 " 2>&1 | grep -v "NOTE: Redirects\|Cuequivariance\|cuequivariance"

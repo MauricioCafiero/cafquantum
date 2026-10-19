@@ -13,3 +13,6 @@ out/
 pm7/
 *.mop
 *.out
+
+# model weights (large binaries, fetched separately)
+weights/

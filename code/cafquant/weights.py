@@ -13,6 +13,8 @@ from pathlib import Path
 
 from .mlips import EGRET_DEFAULT_MODEL
 
+WEIGHTS_DIR = Path(__file__).resolve().parents[2] / "weights"
+
 MACE_CACHE = Path(__import__("os").environ.get("XDG_CACHE_HOME", str(Path.home() / ".cache"))) / "mace"
 AIMNET_CACHE = Path(os.environ.get("AIMNET_CACHE_DIR", str(Path.home() / ".cache" / "aimnet")))
 
@@ -36,7 +38,8 @@ def check_weights() -> dict[str, dict]:
     out["maceoff"] = {"ok": mace_file.is_file(),
                       "detail": str(mace_file) if mace_file.is_file() else f"missing: {mace_file}"}
 
-    # egret: compiled TorchScript model at a known local path (no download!)
+    # egret: compiled TorchScript model in the repo weights/ dir (or wherever
+    # CAFQUANT_EGRET_MODEL points) -- no public download
     egret_model = Path(os.environ.get("CAFQUANT_EGRET_MODEL", EGRET_DEFAULT_MODEL))
     out["egret"] = {"ok": egret_model.is_file(),
                     "detail": str(egret_model) if egret_model.is_file()
@@ -97,9 +100,9 @@ def download(method: str) -> str:
         urllib.request.urlretrieve(url, dst)
         return f"maceoff weights at {dst}"
     if method == "egret":
-        return ("egret models are distributed separately (no public download); point "
-                "CAFQUANT_EGRET_MODEL at the compiled .model file, e.g. EGRET_1.model, "
-                "EGRET_1E.model or EGRET_1T.model from the Egret_models/compiled_models dir")
+        return ("egret models are distributed separately (no public download); drop the "
+                "compiled .model file (EGRET_1.model, EGRET_1E.model, ...) into "
+                f"{WEIGHTS_DIR.name}/ or point CAFQUANT_EGRET_MODEL at it")
     if method == "aimnet2":
         from aimnet.calculators.model_registry import get_model_path
         p = get_model_path("aimnet2-2025")  # sha-256-validated download if absent

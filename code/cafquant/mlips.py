@@ -21,11 +21,10 @@ MACEOFF_ELEMENTS = {"H", "B", "C", "N", "O", "F", "Si", "P", "S", "Cl", "Br", "I
 # (H, C, N, O, F, P, S, Cl, Br, I).
 EGRET_ELEMENTS = {"H", "C", "N", "O", "F", "P", "S", "Cl", "Br", "I"}
 
-# Default location of the Egret-1 compiled MACE models (override with the
-# CAFQUANT_EGRET_MODEL env var to point at EGRET_1E / EGRET_1T etc.).
-EGRET_DEFAULT_MODEL = ("/Users/cafierom/OneDrive - University of Reading/"
-                       "Research-Reading/Python/python_bootcamp/Egret_models/"
-                       "compiled_models/EGRET_1.model")
+# Default location of the Egret-1 compiled MACE model: the repo-local
+# weights/ dir (copy of EGRET_1.model; EGRET_1E/1T can be dropped there too).
+# Override with the CAFQUANT_EGRET_MODEL env var.
+EGRET_DEFAULT_MODEL = str(Path(__file__).resolve().parents[2] / "weights" / "EGRET_1.model")
 
 # GFN2-xTB (tblite) parameter coverage runs to Z=86.
 GFN2_MAX_Z = 86
