@@ -1,0 +1,15 @@
+# venv & caches
+.venv/
+__pycache__/
+*.pyc
+
+# run outputs
+out/
+*.traj
+*.pckl
+*.log
+
+# MOPAC scratch
+pm7/
+*.mop
+*.out
