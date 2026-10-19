@@ -13,7 +13,7 @@ comparable in how they are invoked and what they produce:
 |---|---|---|---|
 | `uma` | UMA small (`uma-s-1p1`, omol task) via fairchem-core | full periodic table | auto-download from HuggingFace |
 | `maceoff` | MACE-OFF23 (small), float64, mace-torch | H C N O F + B Si P S Cl Br I | auto-download |
-| `egret` | Egret-1 (compiled MACE model, float64), mace-torch | H C N O F P S Cl Br I | no download (see below) |
+| `egret` | Egret-1 (compiled MACE model, float64), mace-torch | H C N O F P S Cl Br I | bundled in `weights/` (see below) |
 | `aimnet2` | AIMNet2 (`aimnet2-2025`, B97-3c + D3) via aimnet | ~H–At in its species list | auto-download |
 | `gfn2` | GFN2-xTB via tblite | Z ≤ 86 | none (params embedded) |
 | `pm7` | PM7 via ASE's MOPAC calculator + mopac binary | H–Pu (mopac limits) | install mopac |
@@ -57,12 +57,15 @@ handled automatically; see `code/cafquant/worker.py`.
 
 ### The egret model
 
-Egret-1 models (Rowan Scientific, MACE-architecture compiled TorchScript)
-are obtained separately — there is no public download, hence no `--download`
-entry. Point the environment variable at a compiled `.model` file:
+Egret-1 models (Rowan Scientific, MACE-architecture compiled TorchScript,
+`.model` files) are obtained separately — there is no public download, hence
+no `--download` entry. The default model, `EGRET_1.model`, ships in the
+repo-local `weights/` directory and is found automatically. To use a different
+variant, drop it in `weights/` (or anywhere) and point the environment
+variable at it:
 
 ```sh
-export CAFQUANT_EGRET_MODEL=/path/to/EGRET_1E.model     # default: EGRET_1.model
+export CAFQUANT_EGRET_MODEL=weights/EGRET_1E.model     # default: weights/EGRET_1.model
 ```
 
 EGRET_1, EGRET_1E and EGRET_1T variants generally follow the same element set;
@@ -99,7 +102,9 @@ the actual list is read from the model file itself and enforced by the guard.
 cafquant/
 ├── setup.sh                 # build .venv, install everything, import probe
 ├── run_cafquant.sh          # zsh wrapper: env guards, caffeinate, cli entry
-├── README.md
+├── weights/                 # local model weights (git-ignored; egret ships here)
+│   └── EGRET_1.model
+├── tests/                   # pytest suite: unit tests + one full CLI e2e run
 ├── examples/
 │   ├── water.xyz            # minimal smoke-test input
 │   └── acetone.sdf          # file-format example
@@ -147,6 +152,25 @@ wrote out/water/summary.csv (…s total)
 Full flags: `-m/--methods`, `-t/--tasks`, `--charge`, `--multiplicity`
 (aliased `--spin`), `--conf`, `--seed`, `--fmax`, `--steps`, `--device`,
 `--label`, `--out`, `--check`, `--download`, `--view`, `-q`.
+
+## Testing
+
+```sh
+.venv/bin/python -m pytest tests/ -q
+```
+
+The suite has two layers:
+
+- `tests/test_units.py` — fast checks that don't load any model: method list,
+  element-coverage guards, the SMILES → RDKit pipeline, XYZ input, weight
+  reporting (including that the egret model sits in `weights/`).
+- `tests/test_e2e.py` — one full CLI run of the water example through all six
+  methods (exercising the real worker-subprocess split), asserting every
+  method reports `ok` and energies match known values (PM7 water heat of
+  formation −57.80 kcal/mol, GFN2-xTB −137.97 eV, egret ≈ maceoff within
+  10 meV).
+
+Needs `pytest` in the venv (`setup.sh` adds it). A full suite run takes ~15 s.
 
 ## Output
 
