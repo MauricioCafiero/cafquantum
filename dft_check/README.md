@@ -50,7 +50,7 @@ kcal).
 4. sult 72/99 — the only system with an external DFT reference to
    validate the level against the paper.
 
-## Running
+## Running and evaluating
 
 Each `.inp` references its `.xyz` by relative name; run inside each
 system directory, e.g.:
@@ -73,3 +73,7 @@ triple 222 → {000, 008, 013 trp2, 028, 033, 117}.
 Monomers are shared between triples (35 inputs total, 4 new energy points
 per triple). Cost: ~40–55 atoms per frame at this level ≈ a few core-hours
 each — well under a day of 16-core time for the full set.
+When the `.out` files come back, put them next to the `.inp` in each
+system directory and run `python3 eval.py` — it extracts the final
+single-point energies, builds each triple's delta3 (Eh -> kcal/mol) and
+prints it next to the MLIP values; results land in `dft_delta3.tsv`.
