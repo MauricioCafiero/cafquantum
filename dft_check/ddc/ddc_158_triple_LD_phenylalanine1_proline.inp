@@ -1,4 +1,4 @@
-! WB97X-D3 def2-SVP def2/J TightSCF RIJK
+! WB97M-V def2-TZVP RIJK TightSCF
 %maxcore 1000
 %pal nprocs 16 end
 *xyzfile -1 3 ddc_158_triple_LD_phenylalanine1_proline.xyz

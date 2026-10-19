@@ -1,4 +1,4 @@
-! WB97X-D3 def2-SVP def2/J TightSCF RIJK
+! WB97M-V def2-TZVP RIJK TightSCF
 %maxcore 1000
 %pal nprocs 16 end
 *xyzfile 1 2 sult_005_monomer_histidine2.xyz

@@ -1,4 +1,4 @@
-! WB97X-D3 def2-SVP def2/J TightSCF RIJK
+! WB97M-V def2-TZVP RIJK TightSCF
 %maxcore 1000
 %pal nprocs 16 end
 *xyzfile 0 2 ddc_116_triple_LD_histidine1_lysine.xyz

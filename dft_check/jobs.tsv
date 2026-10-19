@@ -1,7 +1,0 @@
-input	frame_idx	role	q	M	method_values_delta3_kcal
-sult/sult_072_triple_LD_alanine_histidine2	72	triple_LD_alanine_histidine2	1	3	uma -66.3(art) maceoff -0.0 egret -0.4 aimnet2 +6.8 gfn2 -14.1 pm7 -11.8
-sult/sult_099_triple_LD_histidine2_lysine	99	triple_LD_histidine2_lysine	2	2	uma -538.7(art) maceoff 0.0 egret 0.0 aimnet2 +10.3 gfn2 +8.8 pm7 +3.8
-ddc/ddc_116_triple_LD_histidine1_lysine	116	triple_LD_histidine1_lysine	0	2	uma -196.2(art) maceoff -0.3 egret -0.2 aimnet2 +3.4 gfn2 +4.4 pm7 +57.8
-ddc/ddc_158_triple_LD_phenylalanine1_proline	158	triple_LD_phenylalanine1_proline	-1	3	uma +8.0 maceoff -4.1 egret -4.1 aimnet2 +6.6 gfn2 +43.2 pm7 -18.2
-comt/comt_210_triple_LD_lysine_magnesiumw	210	triple_LD_lysine_magnesiumw	2	1	uma +43.9 gfn2 +195.0 pm7 +23.9
-comt/comt_222_triple_LD_magnesiumw_tryptophan2	222	triple_LD_magnesiumw_tryptophan2	1	1	uma +72.6 gfn2 +209.1 pm7 +31.6 (maceoff/egret/aimnet2: Mg guard)
