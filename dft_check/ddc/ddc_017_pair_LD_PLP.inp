@@ -1,0 +1,4 @@
+! wB97M-V def2-TZVP def2/J RIJCOSX TightSCF defgrid3
+%maxcore 1000
+%pal nprocs 6 end
+*xyzfile -2 1 ddc_017_pair_LD_PLP.xyz
