@@ -1,14 +1,17 @@
 #!/usr/bin/env python
-"""cafquant CLI: XYZ / SDF / SMILES input -> sp / opt / freq across five backends.
+"""cafquant CLI: XYZ / SDF / SMILES input -> sp / opt / freq across ten backends.
 
 Usage:
-    python code/cafquant.py <xyz|sdf|SMILES> [-m uma,maceoff,aimnet2,gfn2,pm7]
+    python code/cafquant.py <xyz|sdf|SMILES> [--method m | -m a,b | --all]
         [-t sp,opt,freq] [--charge N] [--multiplicity N] [--label L] [--out DIR]
         [--fmax F] [--steps N] [--conf N] [--seed N] [--device cpu|cuda]
         [--check] [--download] [-q]
 
-Defaults: all five methods, tasks = sp,opt. '--t freq' implies opt. Energies
-are printed per method; MOPAC/PM7 reports a heat of formation, so compare
+Method selection: --method NAME (single), -m/--methods a,b,c, or --all for
+every implemented backend. Default when none given: gfn2 (fastest to smoke-
+test an input; other methods are minutes-to-hours, so nothing runs wholesale
+by accident). Tasks default sp,opt; '--t freq' implies opt. Energies are
+printed per method; MOPAC/PM7 reports a heat of formation, so compare
 methods only within their own family (see summary.csv notes).
 """
 from __future__ import annotations
@@ -24,7 +27,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))  # make code/ importable
 
-from cafquant import METHODS, __version__
+from cafquant import DEFAULT_METHOD, METHODS, __version__
 from cafquant import env  # noqa: F401  (sets OMP guards before torch)
 from cafquant import inputs, weights
 
@@ -39,8 +42,12 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     p = argparse.ArgumentParser(description=__doc__,
                                 formatter_class=argparse.RawDescriptionHelpFormatter)
     p.add_argument("source", help="path to .xyz/.sdf file or a SMILES string")
-    p.add_argument("-m", "--methods", default=",".join(METHODS),
-                   help="comma list from: %s (default: all)" % ",".join(METHODS))
+    p.add_argument("--method", dest="methods", default=None, metavar="NAME",
+                   help="run this single method (shortcut for -m NAME)")
+    p.add_argument("-m", "--methods", dest="methods", default=None,
+                   help="comma list from: %s (default: %s)" % (",".join(METHODS), DEFAULT_METHOD))
+    p.add_argument("--all", dest="run_all", action="store_true",
+                   help="run every implemented method (default: just %s with no flag)" % DEFAULT_METHOD)
     p.add_argument("-t", "--tasks", default="sp,opt",
                    help="comma list from: sp,opt,freq (default: sp,opt; freq implies opt)")
     p.add_argument("--charge", type=int, default=None,
@@ -88,7 +95,7 @@ def main(argv: list[str] | None = None) -> int:
                         format="%(asctime)s %(levelname)s %(message)s", datefmt="%H:%M:%S")
 
     report = weights.check_weights()
-    print("\n".join(weights.format_report(report)))
+    print(weights.format_report(report))
     print("Energies are on each method's own scale; PM7 is a heat of formation "
           "(kcal/mol), the others absolute electronic energies.\n")
     if args.check:
@@ -96,7 +103,11 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     available = weights.check_available()
-    methods = [m.strip() for m in args.methods.split(",") if m.strip()]
+    if args.run_all:
+        methods = list(METHODS)
+    else:
+        methods = [m.strip() for m in (args.methods or DEFAULT_METHOD).split(",")
+                   if m.strip()]
     for m in methods:
         if m not in METHODS:
             sys.exit(f"unknown method: {m}")

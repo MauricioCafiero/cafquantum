@@ -21,7 +21,8 @@ PM7_KCAL, GFN2_EV = -57.80, -137.97
 def rows(tmp_path_factory):
     out = tmp_path_factory.mktemp("e2e")
     cmd = [sys.executable, "-u", str(CLI), "examples/water.xyz", "-t", "sp",
-           "-q", "--out", str(out / "water")]
+           "-q", "-m", "uma,maceoff,egret,aimnet2,gfn2,pm7",
+           "--out", str(out / "water")]
     proc = subprocess.run(cmd, cwd=REPO, capture_output=True, text=True, timeout=900)
     assert proc.returncode == 0, f"CLI exit {proc.returncode}\n{proc.stdout[-2000:]}\n{proc.stderr[-2000:]}"
     summary_csv = out / "water" / "summary.csv"  # --out IS the rundir
@@ -36,6 +37,17 @@ def test_all_methods_present_and_ok(rows):
     assert set(rows) == {"uma", "maceoff", "egret", "aimnet2", "gfn2", "pm7"}
     for method, row in rows.items():
         assert row["status"] == "ok", f"{method} failed: {row.get('error', '')}"
+
+
+def test_default_method_is_gfn2(tmp_path):
+    out = tmp_path / "water_gfn2"
+    cmd = [sys.executable, "-u", str(CLI), "examples/water.xyz", "-t", "sp",
+           "-q", "--out", str(out)]
+    proc = subprocess.run(cmd, cwd=REPO, capture_output=True, text=True, timeout=300)
+    assert proc.returncode == 0, proc.stdout[-2000:] + proc.stderr[-2000:]
+    with (out / "summary.csv").open() as fh:
+        rows = [r["Method"].lower() for r in csv.DictReader(fh)]
+    assert rows == ["gfn2"], f"default must run gfn2 only, got {rows}"
 
 
 def test_reference_energies(rows):

@@ -1,6 +1,6 @@
 # cafquant
 
-A computational-chemistry workbench that runs one molecule through six
+A computational-chemistry workbench that runs one molecule through a set of
 independent backends and collects the results in a single table. Give it an
 XYZ file, an SDF/MOL file, or a SMILES string; it computes single-point
 energies, optimized geometries, and harmonic forces, and writes everything to
@@ -12,11 +12,15 @@ comparable in how they are invoked and what they produce:
 | method | backend | elements | weights |
 |---|---|---|---|
 | `uma` | UMA small (`uma-s-1p1`, omol task) via fairchem-core | full periodic table | auto-download from HuggingFace |
+| `uma1p2` | UMA small 1.2 (`uma-s-1p2`, omol task) via fairchem-core | full periodic table | auto-download from HuggingFace |
 | `maceoff` | MACE-OFF23 (small), float64, mace-torch | H C N O F + B Si P S Cl Br I | auto-download |
 | `egret` | Egret-1 (compiled MACE model, float64), mace-torch | H C N O F P S Cl Br I | bundled in `weights/` (see below) |
 | `aimnet2` | AIMNet2 (`aimnet2-2025`, B97-3c + D3) via aimnet | ~H–At in its species list | auto-download |
 | `gfn2` | GFN2-xTB via tblite | Z ≤ 86 | none (params embedded) |
 | `pm7` | PM7 via ASE's MOPAC calculator + mopac binary | H–Pu (mopac limits) | install mopac |
+| `polar1-s` | MACE-POLAR-1 small (polarisable electrostatics, omol-scale), mace-torch + graph_longrange | OMol25 set (83 elements, incl. metals) | auto-download, cached in `~/.cache/mace` |
+| `polar1-m` | MACE-POLAR-1 medium (12 Å electrostatic field) | OMol25 set | auto-download, cached in `~/.cache/mace` |
+| `omol` | MACE-OMOL-0 extra-large (omol task), mace-torch | OMol25 set | repo `weights/` or auto-download |
 
 Restricted-coverage methods fail fast with a clear "does not cover: X" message
 (checked before any weights are loaded) rather than producing garbage
@@ -32,7 +36,7 @@ whose dependency pins conflict with each other if resolved blindly. Build it
 with:
 
 ```sh
-zsh setup.sh     # creates .venv, installs all six backends, runs an import probe
+zsh setup.sh     # creates .venv, installs all backends, runs an import probe
 ```
 
 Two version facts worth knowing if you extend the environment:
@@ -91,8 +95,9 @@ the actual list is read from the model file itself and enforced by the guard.
   never aborts the run.
 - **Weights check/download**: `--check` prints where each backend's model
   weights live and whether it's usable; `--download` fetches what can be
-  fetched (UMA from HuggingFace, MACE-OFF23 from GitHub, AIMNet2 from its
-  registry; pm7 prints the mopac install instruction).
+  fetched (UMA/UMA-1.2 and MACE-POLAR-1 from HuggingFace/GitHub releases,
+  MACE-OFF23 from GitHub, AIMNet2 from its registry, MACE-OMOL-0 via mace's
+  downloader; pm7 prints the mopac install instruction).
 - **Structure viewer**: `--view` (or the standalone `code/view.py`) opens a
   self-contained 3Dmol.js page with INPUT and optimized-geometry tabs.
 
@@ -114,7 +119,7 @@ cafquant/
 │       ├── env.py           # env guards set before any torch import
 │       ├── inputs.py        # xyz/sdf/smiles → ASE Atoms (+ RDKit pipeline)
 │       ├── weights.py       # weight availability + download
-│       ├── mlips.py         # calculator factory for the six backends
+│       ├── mlips.py         # calculator factory for the ten backends
 │       ├── tasks.py         # sp / opt / freq / thermochemistry via ASE
 │       └── worker.py        # per-process-group worker (see isolation note)
 └── code/view.py             # standalone 3Dmol.js structure viewer
@@ -125,31 +130,30 @@ cafquant/
 ```sh
 zsh setup.sh                                        # once
 
-./run_cafquant.sh "CCO"                             # ethanol: all 6 methods, sp + opt
+./run_cafquant.sh "CCO"                             # ethanol: gfn2 only (default), sp + opt
+./run_cafquant.sh "CCO" --all                       # every backend, sp + opt
+./run_cafquant.sh "CCO" -m uma,maceoff,aimnet2,gfn2,pm7   # torch-family six, sp + opt
 ./run_cafquant.sh "CCO" -t sp,opt,freq              # + frequencies & thermochemistry
 ./run_cafquant.sh mol.sdf                            # file input
 ./run_cafquant.sh "CC(=O)[O-]" -m uma,gfn2 --charge -1   # charged species, subset
+./run_cafquant.sh mol.xyz --method polar1-s          # one charge-aware backend
 ./run_cafquant.sh mol.xyz -m egret --fmax 0.02 --steps 1500
 ./run_cafquant.sh "CCO" --view                       # run then open 3D viewer
 ./run_cafquant.sh --check                            # weights report only
 ./run_cafquant.sh --download -m maceoff,aimnet2      # fetch missing weights
 ```
 
-Expected output shape (water, all defaults):
+Expected output shape (water, defaults):
 
 ```
 method    status                  E_eV     E_kcal    fmax
-uma       ok              -2079.9...  -47962.8..  0.004
-maceoff   ok              -2081.1...  -47991.8..  0.008
-egret     ok              -2081.1...  -47991.8..  0.008
-aimnet2   ok              -2078.9...  -47940.7..  0.005
 gfn2      ok               -137.97...   -3181.8..  0.003
-pm7       ok                 -2.51...     -57.80..  0.006
 
 wrote out/water/summary.csv (…s total)
 ```
 
-Full flags: `-m/--methods`, `-t/--tasks`, `--charge`, `--multiplicity`
+Full flags: `--method`/`-m/--methods` (one method or comma list; no flag =
+`gfn2`; `--all` = every backend), `-t/--tasks`, `--charge`, `--multiplicity`
 (aliased `--spin`), `--conf`, `--seed`, `--fmax`, `--steps`, `--device`,
 `--label`, `--out`, `--check`, `--download`, `--view`, `-q`.
 

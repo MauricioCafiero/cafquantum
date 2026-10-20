@@ -1,8 +1,9 @@
-"""Calculator factory: all six backends as ASE calculators.
+"""Calculator factory: all ten backends as ASE calculators.
 
 A fresh calculator is built per (method, task) so no state leaks between jobs;
 the Atoms object carries over. Charge/spin conventions:
-  - uma (omol): atoms.info["charge"], atoms.info["spin"] = multiplicity
+  - uma / uma1p2 / omol / polar1-s / polar1-m (omol-style models):
+        atoms.info["charge"], atoms.info["spin"] = multiplicity
   - maceoff/egret: MACECalculator(charges_key="charge") reads atoms.info["charge"]
   - aimnet2:    passed at construction (charge, mult)
   - gfn2:       passed to TBLite (charge, multiplicity)
@@ -10,6 +11,7 @@ the Atoms object carries over. Charge/spin conventions:
 """
 from __future__ import annotations
 
+import os
 import shutil
 from pathlib import Path
 
@@ -38,6 +40,25 @@ def maceoff_supported(atoms) -> tuple[bool, str]:
 def egret_supported(atoms) -> tuple[bool, str]:
     unsupported = sorted(set(atoms.get_chemical_symbols()) - EGRET_ELEMENTS)
     return (not unsupported, f"Egret-1 does not cover: {', '.join(unsupported)}")
+
+
+def _patch_polar_gto_kwarg() -> None:
+    """mace 0.3.16's polar path passes ``force_pbc_evaluator`` into
+    GTOElectrostaticFeatures.precompute_geometry, which the graph_longrange
+    version mace 0.3.16 pairs with (v0.4.0) does accept -- but if a newer
+    graph_longrange is installed instead, accept-and-drop the retired kwarg
+    (mirrors external_source_features.py; default is False, no-op for our
+    non-periodic frames). Idempotent."""
+    import inspect
+    from graph_longrange.features import GTOElectrostaticFeatures
+    orig = GTOElectrostaticFeatures.precompute_geometry
+    if "force_pbc_evaluator" in inspect.signature(orig).parameters:
+        return
+
+    def patched(self, *args, force_pbc_evaluator=False, **kwargs):
+        return orig(self, *args, **kwargs)
+
+    GTOElectrostaticFeatures.precompute_geometry = patched
 
 
 class _PinnedNBList:
@@ -102,6 +123,16 @@ def element_guard(method: str, atoms) -> tuple[bool, str]:
     return True, ""
 
 
+def find_omol_model() -> str | None:
+    """MACE-OMOL-0 extra-large weights: repo weights/ first, then the mace cache."""
+    local = Path(__file__).resolve().parents[2] / "weights" / "MACE-omol-0-extra-large-1024.model"
+    if local.is_file():
+        return str(local)
+    cache = Path(os.environ.get("XDG_CACHE_HOME", str(Path.home() / ".cache"))) / "mace"
+    hits = sorted(cache.glob("MACE-omol*"))
+    return str(hits[0]) if hits else None
+
+
 def make_calculator(method: str, *, charge: int = 0, multiplicity: int = 1,
                     label: str = "mol", workdir: str | Path = ".",
                     device: str = "cpu", mixer_damping: float = 0.4):
@@ -113,6 +144,33 @@ def make_calculator(method: str, *, charge: int = 0, multiplicity: int = 1,
         from fairchem.core.calculate.pretrained_mlip import get_predict_unit
         predictor = get_predict_unit("uma-s-1p1", device=device)
         return FAIRChemCalculator(predictor, task_name="omol")  # charge/spin from atoms.info
+
+    if method == "uma1p2":
+        import cafquant.env
+        cafquant.env.patch_torch_for_e3nn()
+        from fairchem.core import FAIRChemCalculator
+        from fairchem.core.calculate.pretrained_mlip import get_predict_unit
+        predictor = get_predict_unit("uma-s-1p2", device=device)
+        return FAIRChemCalculator(predictor, task_name="omol")  # charge/spin from atoms.info
+
+    if method in ("polar1-s", "polar1-m"):
+        import cafquant.env
+        cafquant.env.patch_torch_for_e3nn()
+        _patch_polar_gto_kwarg()
+        from mace.calculators import MACECalculator
+        from mace.calculators.foundations_models import download_mace_polar_checkpoint
+        name = {"polar1-s": "polar-1-s", "polar1-m": "polar-1-m"}[method]
+        path = download_mace_polar_checkpoint(name)
+        return MACECalculator(model_paths=[path], device=device,
+                              default_dtype="float64", charges_key="charge")
+
+    if method == "omol":
+        import cafquant.env
+        cafquant.env.patch_torch_for_e3nn()
+        from mace.calculators.foundations_models import mace_omol
+        w = find_omol_model()
+        return mace_omol(model=w if w else "extra_large",
+                         device=device, default_dtype="float64")
 
     if method == "maceoff":
         import cafquant.env

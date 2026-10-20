@@ -1,4 +1,4 @@
-"""Weight/model availability for the six backends + optional downloads.
+"""Weight/model availability for the ten backends + optional downloads.
 
 Nothing here downloads unless you call :func:`download`; the normal path is a
 cheap existence check so a run can skip backends whose weights are missing.
@@ -11,7 +11,7 @@ import os
 import shutil
 from pathlib import Path
 
-from .mlips import EGRET_DEFAULT_MODEL
+from .mlips import EGRET_DEFAULT_MODEL, find_omol_model
 
 WEIGHTS_DIR = Path(__file__).resolve().parents[2] / "weights"
 
@@ -50,6 +50,24 @@ def check_weights() -> dict[str, dict]:
     out["aimnet2"] = {"ok": aim_file.is_file(),
                       "detail": str(aim_file) if aim_file.is_file()
                       else f"missing: {aim_file}"}
+
+    # uma1p2: a uma-s-1p2* checkpoint in the fairchem HF cache
+    out["uma1p2"] = {"ok": bool(uma_1p2_ckpts := sorted(
+                        (fc / "models--facebook--UMA").glob("snapshots/*/checkpoints/uma-s-1p2*.pt"))),
+                     "detail": str(uma_1p2_ckpts[0]) if uma_1p2_ckpts
+                               else f"no uma-s-1p2 checkpoint under {fc}"}
+
+    # polar1-s / polar1-m: MACE-POLAR-1 checkpoints cached by mace
+    for key, fname in (("polar1-s", "MACEPOLAR1Smodel"), ("polar1-m", "MACEPOLAR1Mmodel")):
+        f = MACE_CACHE / fname
+        out[key] = {"ok": f.is_file(), "detail": str(f) if f.is_file()
+                    else f"missing: {f} (run --download)"}
+
+    # omol: repo weights/ or mace cache (shared resolver in mlips)
+    omol_model = find_omol_model()
+    out["omol"] = {"ok": omol_model is not None,
+                   "detail": omol_model if omol_model else
+                   "missing: MACE-omol-0 model (repo weights/ or --download)"}
 
     # gfn2: params are embedded in the tblite wheel
     try:
@@ -91,6 +109,26 @@ def download(method: str) -> str:
         )
         p = pretrained_checkpoint_path_from_name("uma-s-1p1")  # HF download into cache
         return f"uma weights at {p}"
+    if method == "uma1p2":
+        from fairchem.core.calculate.pretrained_mlip import (
+            pretrained_checkpoint_path_from_name,
+        )
+        p = pretrained_checkpoint_path_from_name("uma-s-1p2")
+        return f"uma1p2 weights at {p}"
+    if method.startswith("polar1"):
+        from mace.calculators.foundations_models import download_mace_polar_checkpoint
+        name = {"polar1-s": "polar-1-s", "polar1-m": "polar-1-m"}[method]
+        p = download_mace_polar_checkpoint(name)  # cached under ~/.cache/mace
+        return f"{method} weights at {p}"
+    if method == "omol":
+        local = WEIGHTS_DIR / "MACE-omol-0-extra-large-1024.model"
+        if local.is_file():
+            return f"omol weights at {local} (repo-local)"
+        import cafquant.env
+        cafquant.env.patch_torch_for_e3nn()
+        from mace.calculators.foundations_models import mace_omol
+        mace_omol(device="cpu")  # no model arg -> downloads the extra-large default
+        return "omol weights downloaded via mace_omol()"
     if method == "maceoff":
         import urllib.request
         MACE_CACHE.mkdir(parents=True, exist_ok=True)

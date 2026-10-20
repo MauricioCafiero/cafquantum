@@ -6,7 +6,8 @@ import pytest
 
 def test_methods_tuple():
     from cafquant import METHODS
-    assert METHODS == ("uma", "maceoff", "egret", "aimnet2", "gfn2", "pm7")
+    assert METHODS == ("uma", "maceoff", "egret", "aimnet2", "gfn2", "pm7",
+                       "polar1-s", "polar1-m", "omol", "uma1p2")
 
 
 def test_element_guard_maceoff_rejects_metals():
@@ -42,9 +43,10 @@ def test_element_guard_uma_covers_everything():
 
 
 def test_weights_report_shape():
+    from cafquant import METHODS
     from cafquant.weights import check_weights
     report = check_weights()
-    assert set(report) == {"uma", "maceoff", "egret", "aimnet2", "gfn2", "pm7"}
+    assert set(report) == set(METHODS)
     for rec in report.values():
         assert isinstance(rec["ok"], bool) and isinstance(rec["detail"], str)
 
