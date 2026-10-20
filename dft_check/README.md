@@ -102,8 +102,10 @@ atoms 0–3) —
 
 **Runner:** `./run_orca.sh` (from this directory). It is resume-safe:
 a job whose `.out` already contains `FINAL SINGLE POINT ENERGY` is
-skipped, work is appended to existing `.out`/`.err` files under a dated
-`>>> restart <<<` marker, and progress goes to `restart.log`. If the
+skipped, and a restarted (non-empty) `.out` gets a dated
+`>>> restart <<<` marker before ORCA's output is appended to it and
+`.err`. Progress goes to whatever log you redirect the script to
+(`restart.log` / `queue_quint.log` below). If the
 machine dies mid-queue, simply rerun it — also restart it under a sleep
 inhibitor if it will run unattended longer than ~1 h (this laptop
 auto-suspends on idle):
@@ -132,6 +134,24 @@ script (it lists every job by `system/stem`, in rough cost order).
   `OMPI_MCA_rmaps_base_oversubscribe=1` (+ the vader setting).
 - If a future ORCA update is linked against a different OpenMPI series,
   rebuild/reinstall the matching MPI with Fortran enabled.
+- **Quick check before a long queue** (should print 4.1.6 and a
+  `Fort compiler: ...gfortran` line; if `mpirun` resolves into
+  `~/.local/openmpi-4.1.8` instead, the env block is not active):
+
+      export PATH=$HOME/miniforge3/envs/orca-mpi/bin:$PATH
+      mpirun --version | head -1
+      ompi_info | grep -i "fort compiler"
+
+  Symptom of getting it wrong: a *big* job (triples, the quintuple)
+  stops within seconds of Startup with `MPI_Type_match_size` /
+  `MPI_ERR_ARG` in the `.out`/`.err`, while monomers still run. Always
+  launch via `./run_orca.sh` (not bare `orca`) so the block applies.
+- The harmless `mca_base_component_repository_open: unable to open
+  mca_btl_openib: librdmacm.so.1` lines in every `.err` are expected
+  and ignorable.
+- The `orca-mpi` conda env is just `openmpi` from conda-forge (4.1.6,
+  built `--enable-mpi-fortran`); recreate with
+  `conda create -n orca-mpi -c conda-forge openmpi=4.1.6`.
 
 Each `.inp` references its `.xyz` by relative name; **the queue `cd`s
 into each system directory before invoking ORCA** (running from the
@@ -150,7 +170,12 @@ triple 158 → {000, 006 phe1, 009 pro, 022, 025, 080}.
 `comt`: triple 210 → {000 LD, 007 lys, 008 Mg, 027, 028, 105};
 triple 222 → {000, 008, 013 trp2, 028, 033, 117}.
 
-Monomers are shared between triples (35 inputs total, 4 new energy points
+Quintuple probe (comt): `comt_059` (LD + Mg-water + Asp1 + Asp2 + Glu,
+74 atoms, q=-2, M=2) plus the three anion monomers `comt_003`, `004`,
+`005` (39 inputs total; the 4 extras are queued last in `run_orca.sh`).
+It is the largest job in the set — expect many hours.
+
+Monomers are shared between triples (35 inputs for the six triples, 4 new energy points
 per triple). ~40–70 atoms per frame: monomers/pairs are minutes at
 def2-TZVP; the four triples (56–70 atoms, meta-GGA + VV10) are the
 long poles — allow a few hours each on this 6-rank laptop setup, so

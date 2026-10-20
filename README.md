@@ -196,5 +196,10 @@ out/<label>/
   that the page is cached by the browser. Everything else runs offline.
 - Long runs: `run_cafquant.sh` holds the Mac awake (`caffeinate`) for the
   duration; for very long jobs launch it detached (see the comment inside).
+- `dft_check/` holds the ORCA DFT spot-check inputs and runner. ORCA here
+  must be launched through `dft_check/run_orca.sh` (it puts the conda
+  `orca-mpi` OpenMPI 4.1.6 on PATH; the `~/.local` OpenMPI 4.1.8 has no
+  Fortran support and large jobs die at Startup) — see
+  `dft_check/README.md`, "Environment gotchas".
 - Reference point sanity: PM7 water ΔHf ≈ −57.8 kcal/mol and GFN2-xTB water
   E ≈ −137.97 eV confirm a healthy install.

@@ -77,7 +77,7 @@ do
     continue
   fi
   echo "[run ] $(date '+%H:%M:%S') $b"
-  printf '\n>>> restart %s after machine crash <<<\n' "$(date -Iseconds)" >> "$stem.out"
+  [ -s "$stem.out" ] && printf '\n>>> restart %s after machine crash <<<\n' "$(date -Iseconds)" >> "$stem.out"
   ( cd "$d" && "$ORCA" "$b.inp" >> "$b.out" 2>> "$b.err")
   if grep -q "FINAL SINGLE POINT ENERGY" "$stem.out" 2>/dev/null; then
     echo "[done] $(date '+%H:%M:%S') $b"

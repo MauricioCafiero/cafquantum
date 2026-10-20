@@ -13,6 +13,8 @@ out/
 pm7/
 *.mop
 *.out
+# ORCA logs are results: keep them
+!dft_check/**/*.out
 *.err
 
 # model weights (large binaries, fetched separately)
