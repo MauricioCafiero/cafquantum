@@ -72,10 +72,11 @@ kcal).
 4. sult 72/99 — the only system with an external DFT reference to
    validate the level against the paper.
 
-## Pending jobs (added 2026-10-20, not yet run)
+## Quintuple probe (added 2026-10-20, finished 2026-10-21)
 
-All four are in the `run_orca.sh` queue after the finished jobs, so a
-plain rerun picks them up (finished jobs are skipped).
+All four ran at the standard level (comt_059 converged in 17 SCF cycles)
+and their `.out` files are in the repo. They sit in the `run_orca.sh`
+queue after the other jobs; a plain rerun skips them.
 
 - `comt/comt_059_quint_LD_magnesiumw_aspartic_acid1_aspartic_acid2_glutamic_acid`
   — the Mg-shell five-fragment cluster (the largest job in the set).
