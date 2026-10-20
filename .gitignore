@@ -13,13 +13,10 @@ out/
 pm7/
 *.mop
 *.out
+*.err
 
 # model weights (large binaries, fetched separately)
 weights/
 # MBE decomposition workspace (2/3-body binding energies)
 mbe/
 .claude/
-dft_check/README.md
-dft_check/eval.py
-dft_check/make_inputs.py
-dft_check/jobs.tsv
