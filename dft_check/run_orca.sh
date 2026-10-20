@@ -65,7 +65,11 @@ for stem in \
     comt/comt_105_pair_lysine_magnesiumw \
     comt/comt_117_pair_magnesiumw_tryptophan2 \
     comt/comt_210_triple_LD_lysine_magnesiumw \
-    comt/comt_222_triple_LD_magnesiumw_tryptophan2
+    comt/comt_222_triple_LD_magnesiumw_tryptophan2 \
+    comt/comt_003_monomer_aspartic_acid1 \
+    comt/comt_004_monomer_aspartic_acid2 \
+    comt/comt_005_monomer_glutamic_acid \
+    comt/comt_059_quint_LD_magnesiumw_aspartic_acid1_aspartic_acid2_glutamic_acid
 do
   d=$(dirname "$stem"); b=$(basename "$stem")
   if grep -q "FINAL SINGLE POINT ENERGY" "$stem.out" 2>/dev/null; then

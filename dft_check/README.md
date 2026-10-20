@@ -72,6 +72,32 @@ kcal).
 4. sult 72/99 — the only system with an external DFT reference to
    validate the level against the paper.
 
+## Pending jobs (added 2026-10-20, not yet run)
+
+All four are in the `run_orca.sh` queue after the finished jobs, so a
+plain rerun picks them up (finished jobs are skipped).
+
+- `comt/comt_059_quint_LD_magnesiumw_aspartic_acid1_aspartic_acid2_glutamic_acid`
+  — the Mg-shell five-fragment cluster (the largest job in the set).
+- `comt/comt_003_monomer_aspartic_acid1`, `comt_004_monomer_aspartic_acid2`,
+  `comt_005_monomer_glutamic_acid` — the anion monomers it needs.
+
+Five-body interaction energy (Eh → kcal/mol × 627.509):
+
+    eps5 = E(059) - E(000 LD) - E(008 Mg) - E(003) - E(004) - E(005)
+
+`eval.py` does not compute this one; read the five `FINAL SINGLE POINT
+ENERGY` lines plus `comt_000`/`comt_008` from the finished set.
+
+Also wanted from the finished set: the Loewdin charges of
+`comt/comt_117_pair_magnesiumw_tryptophan2.out` (Mg + its water are
+atoms 0–3) —
+
+    grep -A40 "LOEWDIN ATOMIC CHARGES" comt/comt_117_pair_magnesiumw_tryptophan2.out | head -40
+
+(The ddc LD+PLP pair inputs `ddc_001`/`ddc_017` were withdrawn on
+2026-10-20 before running; not needed.)
+
 ## Running and evaluating
 
 **Runner:** `./run_orca.sh` (from this directory). It is resume-safe:
