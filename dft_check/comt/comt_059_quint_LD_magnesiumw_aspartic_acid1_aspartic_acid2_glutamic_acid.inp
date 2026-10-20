@@ -1,0 +1,4 @@
+! wB97M-V def2-TZVP def2/J RIJCOSX TightSCF defgrid3
+%maxcore 1000
+%pal nprocs 6 end
+*xyzfile -2 2 comt_059_quint_LD_magnesiumw_aspartic_acid1_aspartic_acid2_glutamic_acid.xyz
