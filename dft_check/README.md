@@ -87,14 +87,18 @@ Five-body interaction energy (Eh → kcal/mol × 627.509):
 
     eps5 = E(059) - E(000 LD) - E(008 Mg) - E(003) - E(004) - E(005)
 
-`eval.py` does not compute this one; read the five `FINAL SINGLE POINT
-ENERGY` lines plus `comt_000`/`comt_008` from the finished set.
+`eval.py` does not compute this one. Computed 2026-10-21 from the
+finished set:
 
-Also wanted from the finished set: the Loewdin charges of
-`comt/comt_117_pair_magnesiumw_tryptophan2.out` (Mg + its water are
-atoms 0–3) —
+    eps5 = -0.852957 Eh = -535.24 kcal/mol
 
-    grep -A40 "LOEWDIN ATOMIC CHARGES" comt/comt_117_pair_magnesiumw_tryptophan2.out | head -40
+dominated by the charge-charge terms (the cluster is q=-2, with Asp1,
+Asp2 and Glu computed as anions), so this is the raw five-body number,
+not a screened binding energy.
+
+Loewdin charges of `comt/comt_117_pair_magnesiumw_tryptophan2.out`
+(Mg + its water, atoms 0–3): Mg +0.789, water O −0.126, water H
++0.247 / +0.236.
 
 (The ddc LD+PLP pair inputs `ddc_001`/`ddc_017` were withdrawn on
 2026-10-20 before running; not needed.)
